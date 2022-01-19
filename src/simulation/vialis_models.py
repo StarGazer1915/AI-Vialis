@@ -8,18 +8,18 @@ from mesa.time import RandomActivation
 
 
 class agent(Agent):
-    def __init__(self, type, speed, direction, pos):
-        self.type = type
-        self.speed = speed
-        self.direction = direction
-        self.pos = pos
+    def __init__(self, unique_id: int, model: Model):
+        super().__init__(unique_id, model)
+        self.type = 'agent'
 
     def move(self):
         pass
 
+
 class traffic_light(Agent):
-    def __init__(self, id):
-        self.id = id
+    def __init__(self, unique_id: int, model: Model):
+        super().__init__(unique_id, model)
+        self.type = 'tl'
 
     def cycle(self):
         pass
@@ -33,9 +33,23 @@ class sensor(Agent):
         pass
 
 
-class enviroment(Model):
-    def __init__(self, width, height):
-        self.grid = MultiGrid(width, height, False)
+class Enviroment(Model):
+    def __init__(self, a, tl_nums, width, height) -> None:
+        self.agent_nums = a
+        self.tl_nums = tl_nums
+        self.tick = 0
         self.running = True
-    def step(self):
-        pass
+        self.grid = MultiGrid(width, height, False)
+        self.schedule = RandomActivation(self)
+
+        for i in range(self.agent_nums):
+            a = agent(i, self)
+            self.schedule.add(a)
+            start_cell = (0, 7)
+            self.grid.place_agent(a, start_cell)
+
+        for i in range(self.tl_nums):
+            a = traffic_light(i + self.agent_nums, self)
+            self.schedule.add(a)
+            start_cell = (14, 7)
+            self.grid.place_agent(a, start_cell)
