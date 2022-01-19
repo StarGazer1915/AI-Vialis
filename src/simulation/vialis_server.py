@@ -32,6 +32,6 @@ grid = CanvasGrid(person_portrayal, g_width, g_height, 600, 600)
 # ============ SERVER SETUP ============= #
 server = ModularServer(enviroment, [grid], "Plurality Voting",
                         {
-                            g_width,
-                            g_height
+                            "width":    g_width,
+                            "height":   g_height
                         })

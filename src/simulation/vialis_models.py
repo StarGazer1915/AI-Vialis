@@ -14,14 +14,14 @@ class agent(Agent):
         self.direction = direction
         self.pos = pos
 
-    def move():
+    def move(self):
         pass
 
 class traffic_light(Agent):
     def __init__(self, id):
         self.id = id
 
-    def cycle():
+    def cycle(self):
         pass
 
 
@@ -29,13 +29,13 @@ class sensor(Agent):
     def __init__(self, id):
         self.id = id
     
-    def detect():
+    def detect(self):
         pass
 
 
 class enviroment(Model):
     def __init__(self, width, height):
         self.grid = MultiGrid(width, height, False)
-
-    def step():
+        self.running = True
+    def step(self):
         pass
