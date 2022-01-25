@@ -18,16 +18,32 @@ from mesa.visualization.UserParam import UserSettableParameter
 # ========== REGULAR FUNCTIONS ========== #
 def person_portrayal(agent):
     (x, y) = agent.pos
-    (w, h) = agent.shape
-    
-    return {"Shape": "rect",
-                 "w": w,
-                 "h": h,
-                 "Color": agent.color,
-                 "Filled": "true",
-                 "Layer": agent.layer,
-                 "x": x,
-                 "y": y}
+
+    try:
+        (w, h) = agent.shape
+
+        portrayal = {"Shape": "rect",
+                     "w": w,
+                     "h": h,
+                     "Color": agent.color,
+                     "Filled": "true",
+                     "Layer": agent.layer,
+                     "x": x,
+                     "y": y}
+    except AttributeError:
+        (heading_x, heading_y) = agent.heading
+
+        portrayal = {"Shape": "arrowHead",
+                     "scale": .75,
+                     "heading_x": heading_x,
+                     "heading_y": heading_y,
+                     "Color": agent.color,
+                     "Filled": "true",
+                     "Layer": agent.layer,
+                     "x": x,
+                     "y": y}
+
+    return portrayal
 
 g_width = 56
 g_height = 56

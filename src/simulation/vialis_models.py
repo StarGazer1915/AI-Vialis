@@ -6,9 +6,9 @@ from mesa.time import BaseScheduler
 import random as rn
 
 class car(Agent):
-    def __init__(self, unique_id, path: list, model: Model) -> None:
+    def __init__(self, unique_id, path: list, heading: tuple, model: Model) -> None:
         super().__init__(unique_id, model)
-        self.shape = (.75, .75)
+        self.heading = heading
         self.color = "#5A9BFF"
         self.layer = 2
         self.path = path
@@ -18,7 +18,7 @@ class car(Agent):
         self.model.grid.remove_agent(self)
         del self
 
-    def new_pos_ang(self, angle: int) -> tuple:
+    def new_pos_ang(self, angle: int) -> (tuple, tuple, bool):
         """Get a new position for the agent near him, based on an angle"""
         # Set all coordinates around the agent
         (x, y) = self.pos
@@ -35,28 +35,28 @@ class car(Agent):
 
         if -30 <= angle < 30:
             # East
-            return possible_poss[6]
+            return possible_poss[6], (1, 0), True
         if 30 <= angle < 60:
             # North-east
-            return possible_poss[7]
+            return possible_poss[7], (1, 1), False
         if 60 <= angle < 120:
             # North
-            return possible_poss[4]
+            return possible_poss[4], (0, 1), True
         if 120 <= angle < 150:
             # North-west
-            return possible_poss[2]
+            return possible_poss[2], (-1, 1), False
         if angle >= 150 or angle < -150:
             # West
-            return possible_poss[1]
+            return possible_poss[1], (-1, 0), True
         if -150 <= angle < -120:
             # South-west
-            return possible_poss[0]
+            return possible_poss[0], (-1, -1), False
         if -120 <= angle < -60:
             # South
-            return possible_poss[3]
+            return possible_poss[3], (0, -1), True
         if -60 <= angle < -30:
             # South-east
-            return possible_poss[5]
+            return possible_poss[5], (1, -1), False
 
     def get_angle(self, cord) -> int:
         """Get the angle of the next point relative to the agents position """
@@ -74,10 +74,12 @@ class car(Agent):
         # Calculate which direction to move next and move there.
         angle = self.get_angle(self.path[0])
         try:
-            new_pos = self.new_pos_ang(angle)
+            (new_pos, heading, change_heading) = self.new_pos_ang(angle)
             cell_list_contents = self.model.grid.get_cell_list_contents(new_pos)
 
             if not cell_list_contents:
+                if change_heading:
+                    self.heading = heading
                 self.model.grid.move_agent(self, new_pos)
             else:
                 # Check if car will be on another car.
@@ -86,6 +88,8 @@ class car(Agent):
                 else:
                     # Check if car will be on red traffic light.
                     if cell_list_contents[0].color != "red":
+                        if change_heading:
+                            self.heading = heading
                         self.model.grid.move_agent(self, new_pos)
 
                         # Check if car will be on sensor.
@@ -106,16 +110,16 @@ class car(Agent):
 
 class spawnpoint(Agent):
     spawnpoints_cords = {
-        "E1": [(29, 0), False],
-        "E2": [(28, 0), False],
-        "E3": [(0, 37), True],
-        "E4": [(0, 38), True],
-        "E5": [(25, 55), False],
-        "E6": [(26, 55), False],
-        "E7": [(27, 55), False],
-        "E8": [(55, 20), True],
-        "E9": [(55, 19), True],
-        "E10": [(55, 18), True]
+        "E1": [(29, 0), False, (0, 1)],
+        "E2": [(28, 0), False, (0, 1)],
+        "E3": [(0, 37), True, (1, 0)],
+        "E4": [(0, 38), True, (1, 0)],
+        "E5": [(25, 55), False, (0, -1)],
+        "E6": [(26, 55), False, (0, -1)],
+        "E7": [(27, 55), False, (0, -1)],
+        "E8": [(55, 20), True, (-1, 0)],
+        "E9": [(55, 19), True, (-1, 0)],
+        "E10": [(55, 18), True, (-1, 0)]
     }
 
     spawnpoint_paths = {
@@ -157,7 +161,7 @@ class spawnpoint(Agent):
     def spawn_car(self) -> None:
         path = rn.choice(self.paths)
 
-        new_car = car(self.model.car_counter, copy(path), self.model)
+        new_car = car(self.model.car_counter, copy(path), self.spawnpoints_cords[self.name][2], self.model)
         self.model.grid.place_agent(new_car, self.pos)
         self.model.schedule.add(new_car)
 
