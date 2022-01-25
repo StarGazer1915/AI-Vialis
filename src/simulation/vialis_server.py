@@ -19,14 +19,15 @@ from mesa.visualization.UserParam import UserSettableParameter
 def person_portrayal(agent):
     (x, y) = agent.pos
     (w, h) = agent.shape
+    
     return {"Shape": "rect",
-            "w": w,
-            "h": h,
-            "Layer": agent.layer,
-            "Filled": "true",
-            "x": x,
-            "y": y,
-            "Color": agent.color}
+                 "w": w,
+                 "h": h,
+                 "Color": agent.color,
+                 "Filled": "true",
+                 "Layer": agent.layer,
+                 "x": x,
+                 "y": y}
 
 g_width = 56
 g_height = 56
@@ -34,18 +35,24 @@ g_height = 56
 grid = CanvasGrid(person_portrayal, g_width, g_height, g_width * 15, g_height * 15)
 model_params = {"height": g_width,
                 "width": g_height,
-                "afs_sto_1_3_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 1 t/m 3 en sensoren",
-                                                                      value=7, min_value=1, max_value=14, step=1),
-                "afs_sto_4_6_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 4 t/m 6 en sensoren",
-                                                                      value=12, min_value=1, max_value=23, step=1),
-                "afs_sto_7_sen": UserSettableParameter("slider", "Afstand tussen stoplicht 7 en sensor",
-                                                                      value=3, min_value=1, max_value=6, step=1),
-                "afs_sto_8_11_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 8 t/m 11 en sensoren",
-                                                                      value=7, min_value=1, max_value=14, step=1),
-                "afs_sto_12_14_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 12 t/m 14 en sensoren",
-                                                                      value=12, min_value=1, max_value=24, step=1),
-                "afs_sto_15_16_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 15 & 16 en sensoren",
-                                                                      value=7, min_value=1, max_value=14, step=1)}
+                "afs_sto_1_2_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 1 & 2 en sensoren",
+                                                         value=7, min_value=1, max_value=14, step=1),
+                "afs_sto_3_4_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 3 & 4 en sensoren",
+                                                         value=7, min_value=1, max_value=14, step=1),
+                "afs_sto_5_7_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 5 t/m 7 en sensoren",
+                                                         value=12, min_value=1, max_value=24, step=1),
+                "afs_sto_8_sen": UserSettableParameter("slider", "Afstand tussen stoplicht 8 en sensor",
+                                                       value=3, min_value=1, max_value=6, step=1),
+                "afs_sto_9_10_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 9 & 10 en sensoren",
+                                                          value=7, min_value=1, max_value=14, step=1),
+                "afs_sto_11_12_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 11 & 12 en sensoren",
+                                                           value=12, min_value=1, max_value=23, step=1),
+                "afs_sto_13_15_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 13 t/m 15 en sensoren",
+                                                           value=7, min_value=1, max_value=14, step=1),
+                "spawnpoint_color": UserSettableParameter("choice", "Spawnpoint color", value="black",
+                                                          choices=["black", "#FFEC00"]),
+                "deathzone_color": UserSettableParameter("choice", "Deathzone color", value="black",
+                                                         choices=["black", "#FF5A5A"])}
 
 # ============ SERVER SETUP ============= #
 server = ModularServer(enviroment, [grid], "Vialis", model_params)
