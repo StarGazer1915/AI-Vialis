@@ -1,9 +1,23 @@
 from copy import copy
+from re import M
 import numpy as np
 from mesa import Agent, Model
 from mesa.space import MultiGrid
 from mesa.time import BaseScheduler
 import random as rn
+# import lcg
+
+class lcg:
+    seed = 1
+    a = 16
+    c = 1
+    m = 5000
+    def __init__(self) -> None:
+        pass
+
+    def lcg(self):
+        self.seed = (self.a * self.seed + self.c) % self.m
+        return self.seed / self.m
 
 class car(Agent):
     def __init__(self, unique_id, path: list, heading: tuple, model: Model) -> None:
@@ -109,6 +123,7 @@ class car(Agent):
             self.move()
 
 class spawnpoint(Agent):
+    lcg = lcg()
     spawnpoints_cords = {
         "E1": [(29, 0), False, (0, 1)],
         "E2": [(28, 0), False, (0, 1)],
@@ -167,7 +182,7 @@ class spawnpoint(Agent):
 
     def step(self) -> None:
         if self.model.tick % 2 == 0:
-            if rn.random() > .5:
+            if self.lcg.lcg() < .25:
                 self.spawn_car()
                 self.model.car_counter += 1
 
