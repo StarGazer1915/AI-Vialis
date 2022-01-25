@@ -221,7 +221,7 @@ class traffic_light(Agent):
         super().__init__(unique_id, model)
         self.name = unique_id
         self.shape = (.75, .5) if self.traffic_lights_details[self.name][1] else (.5, .75)
-        self.color = "#33BD00"
+        self.color = "red" if self.name != "TL5" else "#33BD00"
         self.layer = 1
         self.pos = self.traffic_lights_details[self.name][0]
 
@@ -295,6 +295,24 @@ class enviroment(Model):
             "R8": [(1, 37), (24, 39), True],
             "R9": [(25, 40), (27, 54), False],
             "R10": [(29, 40), (30, 54), False]
+        }
+
+        self.traffic_light_configs = {
+            # Als eerste traffic light in lijst groen is, moet de rest rood zijn
+            "C-TL1": ["TL4"],
+            "C-TL2": ["TL4", "TL6", "TL7"],
+            "C-TL3": ["TL7"],
+            "C-TL4": ["TL1", "TL2", "TL7"],
+            "C-TL6": ["TL2"],
+            "C-TL7": ["TL2", "TL3", "TL4"],
+            "C-TL8": ["TL12"],
+            "C-TL9": ["TL12"],
+            "C-TL10": ["TL12", "TL13", "TL14", "TL15"],
+            "C-TL11": ["TL14", "TL15"],
+            "C-TL12": ["TL8", "TL9", "TL10", "TL14", "TL15"],
+            "C-TL13": ["TL10"],
+            "C-TL14": ["TL10", "TL11", "TL12"],
+            "C-TL15": ["TL10", "TL11", "TL12"],
         }
 
         self.gen_spawnpoints()
