@@ -87,31 +87,41 @@ class car(Agent):
 
         # Calculate which direction to move next and move there.
         angle = self.get_angle(self.path[0])
-        try:
-            (new_pos, heading, change_heading) = self.new_pos_ang(angle)
-            cell_list_contents = self.model.grid.get_cell_list_contents(new_pos)
 
-            if not cell_list_contents:
-                if change_heading:
-                    self.heading = heading
-                self.model.grid.move_agent(self, new_pos)
-            else:
-                # Check if car will be on another car.
-                if cell_list_contents[-1].color == "#5A9BFF":
-                    print(f"Tried to move Car {self.unique_id} on Car {cell_list_contents[-1].unique_id}")
-                else:
-                    # Check if car will be on red traffic light.
-                    if cell_list_contents[0].color != "red":
-                        if change_heading:
-                            self.heading = heading
-                        self.model.grid.move_agent(self, new_pos)
+        (new_pos, heading, change_heading) = self.new_pos_ang(angle)
+        cell_list_contents = self.model.grid.get_cell_list_contents(new_pos)
 
-                        # Check if car will be on sensor.
-                        if cell_list_contents[0].color == "gray":
-                            sensor = cell_list_contents[0].unique_id
-                            print(f"Sensor {sensor} detected Car {self.unique_id}")
-        except KeyError:
-            print(f"Tried to move Car {self.unique_id} out of bounds")
+        if not cell_list_contents:
+            if change_heading:
+                self.heading = heading
+            self.model.grid.move_agent(self, new_pos)
+        else:
+            # Check if car will be on another car.
+            if cell_list_contents[-1].color != "#5A9BFF":
+                # Check if car will be on red traffic light.
+                if cell_list_contents[0].color != "red":
+                    if change_heading:
+                        self.heading = heading
+                    self.model.grid.move_agent(self, new_pos)
+
+                    # Check if car will be on sensor.
+                    if cell_list_contents[0].color == "gray":
+                        sensor = cell_list_contents[0]
+                        if sensor.unique_id[-1] == "2":
+                            # details = {"TL8": "TL9",
+                            #     "TL9": "TL8",
+                            #     "TL14": "TL15",
+                            #     "TL15": "TL14"}
+                            # try:
+                            #     self.model.traffic_lights[
+                            #         int(details[sensor.trafficlight.unique_id][2:]) - 1].car_queue.append(
+                            #         self.unique_id)
+                            #     sensor.trafficlight.car_queue.append(self.unique_id)
+                            # except KeyError:
+                            sensor.trafficlight.car_queue.append(self.unique_id)
+                        elif sensor.unique_id[-1] == "1":
+                            if sensor.trafficlight.check_traffic_lights():
+                                sensor.trafficlight.timer = len(sensor.trafficlight.car_queue) + 1
 
     def step(self) -> None:
         # Kill itself if it hase reached the end of the route
@@ -123,7 +133,6 @@ class car(Agent):
             self.move()
 
 class spawnpoint(Agent):
-    lcg = lcg()
     spawnpoints_cords = {
         "E1": [(29, 0), False, (0, 1)],
         "E2": [(28, 0), False, (0, 1)],
@@ -180,6 +189,8 @@ class spawnpoint(Agent):
         self.model.grid.place_agent(new_car, self.pos)
         self.model.schedule.add(new_car)
 
+    lcg = lcg()
+
     def step(self) -> None:
         if self.model.tick % 2 == 0:
             if self.lcg.lcg() < .25:
@@ -232,29 +243,96 @@ class traffic_light(Agent):
         "TL15": [(27, 40), True],
     }
 
+    traffic_light_configs = {
+        # Traffic lights in list have to be red in order for the corresponding traffic light to be green.
+        # Traffic lights in list can be green when the corresponding traffic light is green
+        # Cooldown
+        "C-TL1": (["TL4"], [], 2),
+        "C-TL2": (["TL4", "TL6", "TL7"], ["TL1", "TL3"], 6),
+        "C-TL3": (["TL7"], [], 6),
+        "C-TL4": (["TL1", "TL2", "TL7"], ["TL6"], 8),
+        "C-TL5": ([], [], 2),
+        "C-TL6": (["TL2"], [], 4),
+        "C-TL7": (["TL2", "TL3", "TL4"], ["TL1", "TL6"], 7),
+        "C-TL8": (["TL12"], ["TL9"], 4),
+        "C-TL9": (["TL12"], ["TL8"], 4),
+        "C-TL10": (["TL12", "TL13", "TL14", "TL15"], ["TL8", "TL9", "TL11"], 7),
+        "C-TL11": (["TL14", "TL15"], [], 5),
+        "C-TL12": (["TL8", "TL9", "TL10", "TL14", "TL15"], ["TL13"], 8),
+        "C-TL13": (["TL10"], [], 2),
+        "C-TL14": (["TL10", "TL11", "TL12"], ["TL8", "TL9", "TL15"], 4),
+        "C-TL15": (["TL10", "TL11", "TL12"], ["TL8", "TL9", "TL14"], 4)
+    }
+
     def __init__(self, unique_id: str, model: Model) -> None:
         super().__init__(unique_id, model)
         self.name = unique_id
         self.shape = (.75, .5) if self.traffic_lights_details[self.name][1] else (.5, .75)
-        self.color = "red" if self.name != "TL5" else "#33BD00"
+        self.color = "red"
         self.layer = 1
         self.pos = self.traffic_lights_details[self.name][0]
 
+        self.car_queue = []
+        self.timer = 0
+        self.cooldown = 0
+
+    def check_traffic_lights(self) -> bool:
+        # Check if traffic lights in config are red, have a cooldown or have a longer queue.
+        for config in self.traffic_light_configs[f"C-{self.name}"][0]:
+            trafficlight = self.model.traffic_lights[int(config[2:]) - 1]
+            if (trafficlight.color != "red" or trafficlight.cooldown > 0) or len(trafficlight.car_queue) > len(
+                    self.car_queue):
+                return False
+        return True
+
     def cycle(self) -> None:
-        # red = "red"
-        # orange = "#FF9021"
-        # green = "#33BD00"
-        pass
+        if 0 < self.timer <= 1:
+            # Orange
+            self.color = "#FF9021"
+        elif self.timer > 1:
+            # Green
+            self.color = "#33BD00"
+        else:
+            self.color = "red"
+
+    def step(self) -> None:
+        #print(f"Traffic light {self.name} queue: {self.car_queue}")
+
+        self.cycle()
+        if self.cooldown > 0:
+            self.cooldown -= 1
+        elif self.cooldown == 0:
+            if self.timer > 1:
+                self.timer -= 1
+            elif self.timer == 1:
+                self.timer -= 1
+                if self.check_traffic_lights() is False:
+                    self.cooldown = self.traffic_light_configs[f"C-{self.name}"][2]
 
 class sensor(Agent):
-    def __init__(self, unique_id: str, flip: bool, model: Model) -> None:
+    def __init__(self, unique_id: str, flip: bool, trafficlight: Agent, model: Model) -> None:
         super().__init__(unique_id, model)
         self.name = unique_id
         self.shape = (.3, .1) if flip else (.1, .3)
         self.color = "gray"
         self.layer = 1
 
-class enviroment(Model):
+        self.trafficlight = trafficlight
+
+    def detect(self) -> None:
+        cell_list_contents = self.model.grid.get_cell_list_contents(self.pos)
+        # Check if car is on sensor 'S...-1'
+        if self.name[-1] == "1" and cell_list_contents[-1].color == "#5A9BFF":
+            car = cell_list_contents[-1].unique_id
+            if self.trafficlight.color != "red" and car in self.trafficlight.car_queue:
+                self.trafficlight.car_queue.remove(car)
+            if self.trafficlight.check_traffic_lights():
+                self.trafficlight.timer = len(self.trafficlight.car_queue) + 1
+
+    def step(self) -> None:
+        self.detect()
+
+class environment(Model):
     def __init__(self, width, height, afs_sto_1_2_sen, afs_sto_3_4_sen, afs_sto_5_7_sen, afs_sto_8_sen,
                  afs_sto_9_10_sen, afs_sto_11_12_sen, afs_sto_13_15_sen, spawnpoint_color, deathzone_color) -> None:
         self.grid = MultiGrid(width, height, False)
@@ -266,37 +344,39 @@ class enviroment(Model):
         self.spawnpoint_color = spawnpoint_color
         self.deathzone_color = deathzone_color
 
+        self.traffic_lights = []
+
         self.sensors_details = {
             "S1-1": [(29, 14), True],
-            "S1-2": [(29, 14 - afs_sto_1_2_sen), True],
+            "S1-2": [(29, 14 - afs_sto_1_2_sen), True, afs_sto_1_2_sen],
             "S2-1": [(28, 14), True],
-            "S2-2": [(28, 14 - afs_sto_1_2_sen), True],
+            "S2-2": [(28, 14 - afs_sto_1_2_sen), True, afs_sto_1_2_sen],
             "S3-1": [(26, 22), True],
-            "S3-2": [(26, 22 + afs_sto_3_4_sen), True],
+            "S3-2": [(26, 22 + afs_sto_3_4_sen), True, afs_sto_3_4_sen],
             "S4-1": [(27, 22), True],
-            "S4-2": [(27, 22 + afs_sto_3_4_sen), True],
+            "S4-2": [(27, 22 + afs_sto_3_4_sen), True, afs_sto_3_4_sen],
             "S5-1": [(31, 20), False],
-            "S5-2": [(31 + afs_sto_5_7_sen, 20), False],
+            "S5-2": [(31 + afs_sto_5_7_sen, 20), False, afs_sto_5_7_sen],
             "S6-1": [(31, 19), False],
-            "S6-2": [(31 + afs_sto_5_7_sen, 19), False],
+            "S6-2": [(31 + afs_sto_5_7_sen, 19), False, afs_sto_5_7_sen],
             "S7-1": [(31, 18), False],
-            "S7-2": [(31 + afs_sto_5_7_sen, 18), False],
+            "S7-2": [(31 + afs_sto_5_7_sen, 18), False, afs_sto_5_7_sen],
             "S8-1": [(30, 35), True],
-            "S8-2": [(30, 35 - afs_sto_8_sen), True],
+            "S8-2": [(30, 35 - afs_sto_8_sen), True, afs_sto_8_sen],
             "S9-1": [(29, 35), True],
-            "S9-2": [(29, 35 - afs_sto_9_10_sen), True],
+            "S9-2": [(29, 35 - afs_sto_9_10_sen), True, afs_sto_9_10_sen],
             "S10-1": [(28, 35), True],
-            "S10-2": [(28, 35 - afs_sto_9_10_sen), True],
+            "S10-2": [(28, 35 - afs_sto_9_10_sen), True, afs_sto_9_10_sen],
             "S11-1": [(23, 37), False],
-            "S11-2": [(23 - afs_sto_11_12_sen, 37), False],
+            "S11-2": [(23 - afs_sto_11_12_sen, 37), False, afs_sto_11_12_sen],
             "S12-1": [(23, 38), False],
-            "S12-2": [(23 - afs_sto_11_12_sen, 38), False],
+            "S12-2": [(23 - afs_sto_11_12_sen, 38), False, afs_sto_11_12_sen],
             "S13-1": [(25, 41), True],
-            "S13-2": [(25, 41 + afs_sto_13_15_sen), True],
+            "S13-2": [(25, 41 + afs_sto_13_15_sen), True, afs_sto_13_15_sen],
             "S14-1": [(26, 41), True],
-            "S14-2": [(26, 41 + afs_sto_13_15_sen), True],
+            "S14-2": [(26, 41 + afs_sto_13_15_sen), True, afs_sto_13_15_sen],
             "S15-1": [(27, 41), True],
-            "S15-2": [(27, 41 + afs_sto_13_15_sen), True]
+            "S15-2": [(27, 41 + afs_sto_13_15_sen), True, afs_sto_13_15_sen]
         }
 
         self.roadzones = {
@@ -310,24 +390,6 @@ class enviroment(Model):
             "R8": [(1, 37), (24, 39), True],
             "R9": [(25, 40), (27, 54), False],
             "R10": [(29, 40), (30, 54), False]
-        }
-
-        self.traffic_light_configs = {
-            # Als eerste traffic light in lijst groen is, moet de rest rood zijn
-            "C-TL1": ["TL4"],
-            "C-TL2": ["TL4", "TL6", "TL7"],
-            "C-TL3": ["TL7"],
-            "C-TL4": ["TL1", "TL2", "TL7"],
-            "C-TL6": ["TL2"],
-            "C-TL7": ["TL2", "TL3", "TL4"],
-            "C-TL8": ["TL12"],
-            "C-TL9": ["TL12"],
-            "C-TL10": ["TL12", "TL13", "TL14", "TL15"],
-            "C-TL11": ["TL14", "TL15"],
-            "C-TL12": ["TL8", "TL9", "TL10", "TL14", "TL15"],
-            "C-TL13": ["TL10"],
-            "C-TL14": ["TL10", "TL11", "TL12"],
-            "C-TL15": ["TL10", "TL11", "TL12"],
         }
 
         self.gen_spawnpoints()
@@ -359,14 +421,15 @@ class enviroment(Model):
     def gen_traffic_lights(self) -> None:
         for traffic_light_code in range(1, 16):
             new_traffic_light = traffic_light(f"TL{traffic_light_code}", self)
+            self.traffic_lights.append(new_traffic_light)
             self.grid.place_agent(new_traffic_light, new_traffic_light.pos)
             self.schedule.add(new_traffic_light)
 
     def gen_sensors(self) -> None:
-        for sensor_code1 in range(1, 16):
-            for sensor_code2 in range(1, 3):
-                new_sensor = sensor(f"S{sensor_code1}-{sensor_code2}",
-                                    self.sensors_details[f"S{sensor_code1}-{sensor_code2}"][1], self)
+        for x in range(1, 16):
+            for sensor_code in range(1, 3):
+                new_sensor = sensor(f"S{x}-{sensor_code}",
+                                    self.sensors_details[f"S{x}-{sensor_code}"][1], self.traffic_lights[x-1], self)
                 self.grid.place_agent(new_sensor, self.sensors_details[new_sensor.name][0])
                 self.schedule.add(new_sensor)
 

@@ -10,7 +10,7 @@ The creation of the sliders can be found under the variables section!
 
 # =============== IMPORTS =============== #
 from turtle import width
-from vialis_models import enviroment
+from vialis_models import environment
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
@@ -52,23 +52,23 @@ grid = CanvasGrid(person_portrayal, g_width, g_height, g_width * 15, g_height * 
 model_params = {"height": g_width,
                 "width": g_height,
                 "afs_sto_1_2_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 1 & 2 en sensoren",
-                                                         value=7, min_value=1, max_value=14, step=1),
+                                                         value=13, min_value=1, max_value=13, step=1),
                 "afs_sto_3_4_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 3 & 4 en sensoren",
-                                                         value=7, min_value=1, max_value=14, step=1),
+                                                         value=14, min_value=1, max_value=14, step=1),
                 "afs_sto_5_7_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 5 t/m 7 en sensoren",
-                                                         value=12, min_value=1, max_value=24, step=1),
+                                                         value=12, min_value=1, max_value=23, step=1),
                 "afs_sto_8_sen": UserSettableParameter("slider", "Afstand tussen stoplicht 8 en sensor",
-                                                       value=3, min_value=1, max_value=6, step=1),
+                                                       value=7, min_value=1, max_value=7, step=1),
                 "afs_sto_9_10_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 9 & 10 en sensoren",
-                                                          value=7, min_value=1, max_value=14, step=1),
+                                                          value=14, min_value=1, max_value=14, step=1),
                 "afs_sto_11_12_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 11 & 12 en sensoren",
-                                                           value=12, min_value=1, max_value=23, step=1),
+                                                           value=11, min_value=1, max_value=22, step=1),
                 "afs_sto_13_15_sen": UserSettableParameter("slider", "Afstand tussen stoplichten 13 t/m 15 en sensoren",
-                                                           value=7, min_value=1, max_value=14, step=1),
+                                                           value=13, min_value=1, max_value=13, step=1),
                 "spawnpoint_color": UserSettableParameter("choice", "Spawnpoint color", value="black",
                                                           choices=["black", "#FFEC00"]),
                 "deathzone_color": UserSettableParameter("choice", "Deathzone color", value="black",
                                                          choices=["black", "#FF5A5A"])}
 
 # ============ SERVER SETUP ============= #
-server = ModularServer(enviroment, [grid], "Vialis", model_params)
+server = ModularServer(environment, [grid], "Vialis", model_params)
