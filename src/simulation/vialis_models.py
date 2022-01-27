@@ -20,14 +20,27 @@ class lcg:
         return self.seed / self.m
 
 class vehicle(Agent):
-    def __init__(self, unique_id, heading: tuple, color: str, path: list, model: Model) -> None:
+    def __init__(self, unique_id, heading: tuple, color: str, path: list, min_ticks: int, start_ticks: int,
+                 model: Model) -> None:
         super().__init__(unique_id, model)
         self.heading = heading
         self.color = color
         self.layer = 2
         self.path = path
 
+        self.min_ticks = min_ticks
+        self.start_ticks = start_ticks
+
     def remove(self) -> None:
+        # 1 cell is 9 meter 
+        vehicle = "Bus" if self.color == "#FFFE00" else "Car"
+        ticks_taken = self.model.tick - self.start_ticks
+        tick_diff = self.model.tick - ticks_taken
+        tick_snelheid = (self.min_ticks*9/ticks_taken)*3.6
+        self.model.avg_speeds.append(tick_snelheid)
+        delay = tick_snelheid * tick_diff
+        # print(f"{vehicle} {self.unique_id} was {delay} seconds delayed")
+        # print(f"{vehicle} {self.unique_id} had a avg speed of {round(tick_snelheid, 2)}k/m")
         self.model.schedule.remove(self)
         self.model.grid.remove_agent(self)
         del self
@@ -97,7 +110,7 @@ class vehicle(Agent):
             self.model.grid.move_agent(self, new_pos)
         else:
             # Check if vehicle will be on another vehicle.
-            if cell_list_contents[-1].color not in ["#0021B4", "#5A9BFF"]:
+            if cell_list_contents[-1].color not in ["#FFFE00", "#5A9BFF"]:
                 # Check if vehicle will be on red traffic light.
                 if cell_list_contents[0].color != "red":
                     if change_heading:
@@ -168,6 +181,19 @@ class spawnpoint(Agent):
         "E10": [[(26, 18), (26, 0)]]  # To deathzone 1
     }
 
+    spawnpoint_ticks = {
+        "E1": [43, 43],
+        "E2": [68, 56, 56],
+        "E3": [64, 77, 77],
+        "E4": [47, 48],
+        "E5": [42],
+        "E6": [56, 69, 69],
+        "E7": [56, 69, 69],
+        "E8": [74, 62, 62],
+        "E9": [76, 64, 64],
+        "E10": [48]
+    }
+
     def __init__(self, unique_id: str, color: str, model: Model) -> None:
         super().__init__(unique_id, model)
         self.name = unique_id
@@ -179,9 +205,11 @@ class spawnpoint(Agent):
 
     def spawn_vehicle(self) -> None:
         path = rn.choice(self.paths)
+        min_ticks = self.spawnpoint_ticks[self.unique_id][self.paths.index(path)]
 
         new_vehicle = vehicle(self.model.vehicle_counter, self.spawnpoints_cords[self.name][2],
-                              "#0021B4" if self.name == "E8" else "#5A9BFF", copy(path), self.model)
+                              "#FFFE00" if self.name == "E8" else "#5A9BFF", copy(path), min_ticks, self.model.tick,
+                              self.model)
         self.model.grid.place_agent(new_vehicle, self.pos)
         self.model.schedule.add(new_vehicle)
 
@@ -347,7 +375,7 @@ class sensor(Agent):
     def detect(self) -> None:
         cell_list_contents = self.model.grid.get_cell_list_contents(self.pos)
         # Check if vehicle is on sensor that is closest to the corresponding traffic light.
-        if self.name[-1] == "1" and cell_list_contents[-1].color in ["#0021B4", "#5A9BFF"]:
+        if self.name[-1] == "1" and cell_list_contents[-1].color in ["#FFFE00", "#5A9BFF"]:
             vehicle = cell_list_contents[-1].unique_id
 
             # Check if traffic light is not red and vehicle id is in the vehicle queue
@@ -369,6 +397,7 @@ class environment(Model):
         self.running = True
         self.tick = 0
         self.vehicle_counter = 0
+        self.avg_speeds = []
 
         self.spawnpoint_color = spawnpoint_color
         self.deathzone_color = deathzone_color
@@ -470,3 +499,5 @@ class environment(Model):
     def step(self) -> None:
         self.tick += 1
         self.schedule.step()
+        if self.tick % 1200 == 0:
+            print(f"average speed is {round(sum(self.avg_speeds)/len(self.avg_speeds),2)}K/m")
