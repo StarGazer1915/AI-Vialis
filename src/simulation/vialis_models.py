@@ -43,6 +43,7 @@ class vehicle(Agent):
         # print(f"{vehicle} {self.unique_id} had a avg speed of {round(tick_snelheid, 2)}k/m")
         self.model.schedule.remove(self)
         self.model.grid.remove_agent(self)
+        print("i want kill myself")
         del self
 
     def new_pos_ang(self, angle: int) -> (tuple, tuple, bool):
@@ -212,6 +213,8 @@ class spawnpoint(Agent):
                               self.model)
         self.model.grid.place_agent(new_vehicle, self.pos)
         self.model.schedule.add(new_vehicle)
+        self.model.vehicle_counter += 1
+        return new_vehicle
 
     lcg = lcg()
 
@@ -219,7 +222,6 @@ class spawnpoint(Agent):
         if self.model.tick % 2 == 0:
             if self.lcg.lcg() < .25:
                 self.spawn_vehicle()
-                self.model.vehicle_counter += 1
 
 class road(Agent):
     def __init__(self, flip: bool) -> None:
