@@ -19,11 +19,11 @@ class lcg:
         self.seed = (self.a * self.seed + self.c) % self.m
         return self.seed / self.m
 
-class car(Agent):
-    def __init__(self, unique_id, path: list, heading: tuple, model: Model) -> None:
+class vehicle(Agent):
+    def __init__(self, unique_id, heading: tuple, color: str, path: list, model: Model) -> None:
         super().__init__(unique_id, model)
         self.heading = heading
-        self.color = "#5A9BFF"
+        self.color = color
         self.layer = 2
         self.path = path
 
@@ -96,45 +96,27 @@ class car(Agent):
                 self.heading = heading
             self.model.grid.move_agent(self, new_pos)
         else:
-            # Check if car will be on another car.
-            if cell_list_contents[-1].color != "#5A9BFF":
-                # Check if car will be on red traffic light.
+            # Check if vehicle will be on another vehicle.
+            if cell_list_contents[-1].color not in ["#0021B4", "#5A9BFF"]:
+                # Check if vehicle will be on red traffic light.
                 if cell_list_contents[0].color != "red":
                     if change_heading:
                         self.heading = heading
                     self.model.grid.move_agent(self, new_pos)
 
-                    # Check if car will be on sensor.
+                    # Check if vehicle will be on sensor.
                     if cell_list_contents[0].color == "gray":
                         sensor = cell_list_contents[0]
                         trafficlight = sensor.trafficlight
 
                         # Check if the sensor is the one which is farthest from the corresponding traffic light.
                         if sensor.unique_id[-1] == "2" and sensor.unique_id != "S8-2":
-                            try:
-                                # Try adding the car id to car queue of the traffic lights
-                                # corresponding to straight ahead.
-                                self.model.traffic_lights[
-                                    int(self.model.straight[trafficlight.unique_id][2:]) - 1].car_queue.append(
-                                    self.unique_id)
-                                trafficlight.car_queue.append(self.unique_id)
-                            except KeyError:
-                                # Traffic light does not correspond to straight ahead, add car id to car queue.
-                                trafficlight.car_queue.append(self.unique_id)
+                            trafficlight.add_to_queue(self.unique_id)
                         # Check if the sensor is the one which is closest from the corresponding traffic light.
                         elif sensor.unique_id[-1] == "1":
                             # Check if traffic light can be green.
                             if trafficlight.check_traffic_lights():
-                                try:
-                                    # Try starting the timer of the traffic lights corresponding to straight ahead.
-                                    simultaneous_traffic_light = self.model.traffic_lights[
-                                        int(self.model.straight[trafficlight.unique_id][2:]) - 1]
-                                    # Timer = amount of cars in queue + 2.
-                                    simultaneous_traffic_light.timer = len(simultaneous_traffic_light.car_queue) + 2
-                                    trafficlight.timer = len(trafficlight.car_queue) + 2
-                                except KeyError:
-                                    # Traffic light does not correspond to straight ahead, start timer.
-                                    trafficlight.timer = len(trafficlight.car_queue) + 2
+                                trafficlight.start_timer()
 
     def step(self) -> None:
         # Kill itself if it hase reached the end of the route
@@ -195,20 +177,21 @@ class spawnpoint(Agent):
         self.pos = self.spawnpoints_cords[self.name][0]
         self.paths = self.spawnpoint_paths[self.name]
 
-    def spawn_car(self) -> None:
+    def spawn_vehicle(self) -> None:
         path = rn.choice(self.paths)
 
-        new_car = car(self.model.car_counter, copy(path), self.spawnpoints_cords[self.name][2], self.model)
-        self.model.grid.place_agent(new_car, self.pos)
-        self.model.schedule.add(new_car)
+        new_vehicle = vehicle(self.model.vehicle_counter, self.spawnpoints_cords[self.name][2],
+                              "#0021B4" if self.name == "E8" else "#5A9BFF", copy(path), self.model)
+        self.model.grid.place_agent(new_vehicle, self.pos)
+        self.model.schedule.add(new_vehicle)
 
     lcg = lcg()
 
     def step(self) -> None:
         if self.model.tick % 2 == 0:
             if self.lcg.lcg() < .25:
-                self.spawn_car()
-                self.model.car_counter += 1
+                self.spawn_vehicle()
+                self.model.vehicle_counter += 1
 
 class road(Agent):
     def __init__(self, flip: bool) -> None:
@@ -285,7 +268,7 @@ class traffic_light(Agent):
         self.layer = 1
         self.pos = self.traffic_lights_details[self.name][0]
 
-        self.car_queue = []
+        self.vehicle_queue = []
         self.timer = 0
         self.cooldown = 0
 
@@ -293,10 +276,39 @@ class traffic_light(Agent):
         # Check if traffic lights in config are red, have a cooldown or have a longer queue.
         for config in self.traffic_light_configs[f"C-{self.name}"][0]:
             trafficlight = self.model.traffic_lights[int(config[2:]) - 1]
-            if (trafficlight.color != "red" or trafficlight.cooldown > 0) or len(trafficlight.car_queue) > len(
-                    self.car_queue):
+            if (trafficlight.color != "red" or trafficlight.cooldown > 0) or len(trafficlight.vehicle_queue) > len(
+                    self.vehicle_queue):
                 return False
         return True
+
+    def add_to_queue(self, vehicle: Agent) -> None:
+        try:
+            # Try adding the vehicle id to vehicle queue of the traffic lights corresponding to straight ahead.
+            self.model.traffic_lights[int(self.model.straight[self.unique_id][2:]) - 1].vehicle_queue.append(vehicle)
+            self.vehicle_queue.append(vehicle)
+        except KeyError:
+            # Traffic light does not correspond to straight ahead, add vehicle id to vehicle queue.
+            self.vehicle_queue.append(vehicle)
+
+    def remove_from_queue(self, vehicle: Agent) -> None:
+        try:
+            # Try removing the vehicle from vehicle queue of the traffic lights corresponding to straight ahead.
+            self.model.traffic_lights[int(self.model.straight[self.unique_id][2:]) - 1].vehicle_queue.remove(vehicle)
+            self.vehicle_queue.remove(vehicle)
+        except KeyError:
+            # Traffic light does not correspond to straight ahead, remove vehicle from vehicle queue.
+            self.vehicle_queue.remove(vehicle)
+
+    def start_timer(self) -> None:
+        try:
+            # Try starting the timer of the traffic lights corresponding to straight ahead.
+            simultaneous_traffic_light = self.model.traffic_lights[int(self.model.straight[self.unique_id][2:]) - 1]
+            # Timer = amount of vehicles in queue + 2.
+            simultaneous_traffic_light.timer = len(simultaneous_traffic_light.vehicle_queue) + 2
+            self.timer = len(self.vehicle_queue) + 2
+        except KeyError:
+            # Traffic light does not correspond to straight ahead, start timer.
+            self.timer = len(self.vehicle_queue) + 2
 
     def cycle(self) -> None:
         if 0 < self.timer <= 2:
@@ -334,32 +346,17 @@ class sensor(Agent):
 
     def detect(self) -> None:
         cell_list_contents = self.model.grid.get_cell_list_contents(self.pos)
-        # Check if car is on sensor that is closest to the corresponding traffic light.
-        if self.name[-1] == "1" and cell_list_contents[-1].color == "#5A9BFF":
-            car = cell_list_contents[-1].unique_id
+        # Check if vehicle is on sensor that is closest to the corresponding traffic light.
+        if self.name[-1] == "1" and cell_list_contents[-1].color in ["#0021B4", "#5A9BFF"]:
+            vehicle = cell_list_contents[-1].unique_id
 
-            # Check if traffic light is not red and car id is in the car queue of the corresponding traffic light.
-            if self.trafficlight.color != "red" and car in self.trafficlight.car_queue:
-                try:
-                    # Try removing the car from car queue of the traffic lights corresponding to straight ahead.
-                    self.model.traffic_lights[
-                        int(self.model.straight[self.trafficlight.unique_id][2:]) - 1].car_queue.remove(car)
-                    self.trafficlight.car_queue.remove(car)
-                except KeyError:
-                    # Traffic light does not correspond to straight ahead, remove car from car queue.
-                    self.trafficlight.car_queue.remove(car)
+            # Check if traffic light is not red and vehicle id is in the vehicle queue
+            # of the corresponding traffic light.
+            if self.trafficlight.color != "red" and vehicle in self.trafficlight.vehicle_queue:
+                self.trafficlight.remove_from_queue(vehicle)
             # Check if traffic light can be green.
             if self.trafficlight.check_traffic_lights():
-                try:
-                    # Try starting the timer of the traffic lights corresponding to straight ahead.
-                    simultaneous_traffic_light = self.model.traffic_lights[
-                        int(self.model.straight[self.trafficlight.unique_id][2:]) - 1]
-                    # Timer = amount of cars in queue + 2.
-                    simultaneous_traffic_light.timer = len(simultaneous_traffic_light.car_queue) + 2
-                    self.trafficlight.timer = len(self.trafficlight.car_queue) + 2
-                except KeyError:
-                    # Traffic light does not correspond to straight ahead, start timer.
-                    self.trafficlight.timer = len(self.trafficlight.car_queue) + 2
+                self.trafficlight.start_timer()
 
     def step(self) -> None:
         self.detect()
@@ -371,7 +368,7 @@ class environment(Model):
         self.schedule = BaseScheduler(self)
         self.running = True
         self.tick = 0
-        self.car_counter = 0
+        self.vehicle_counter = 0
 
         self.spawnpoint_color = spawnpoint_color
         self.deathzone_color = deathzone_color
@@ -465,8 +462,8 @@ class environment(Model):
     def gen_sensors(self) -> None:
         for x in range(1, 16):
             for sensor_code in range(1, 3):
-                new_sensor = sensor(f"S{x}-{sensor_code}",
-                                    self.sensors_details[f"S{x}-{sensor_code}"][1], self.traffic_lights[x-1], self)
+                new_sensor = sensor(f"S{x}-{sensor_code}", self.sensors_details[f"S{x}-{sensor_code}"][1],
+                                    self.traffic_lights[x - 1], self)
                 self.grid.place_agent(new_sensor, self.sensors_details[new_sensor.name][0])
                 self.schedule.add(new_sensor)
 
