@@ -1,20 +1,16 @@
 from copy import copy
-from re import M
 import numpy as np
 from mesa import Agent, Model
 from mesa.space import MultiGrid
 from mesa.time import BaseScheduler
 import random as rn
 from copy import deepcopy
-# import lcg
 
 class lcg:
     seed = 1
     a = 16
     c = 1
     m = 5000
-    def __init__(self) -> None:
-        pass
 
     def lcg(self):
         self.seed = (self.a * self.seed + self.c) % self.m
@@ -41,7 +37,7 @@ class vehicle(Agent):
         self.model.grid.remove_agent(self)
         del self
 
-    def new_pos_ang(self, angle: int) -> (tuple, tuple, bool):
+    def new_pos_ang(self, angle: int):
         """Get a new position for the agent near him, based on an angle"""
         # Set all coordinates around the agent
         (x, y) = self.pos
@@ -218,6 +214,8 @@ class spawnpoint(Agent):
                               self.model)
         self.model.grid.place_agent(new_vehicle, self.pos)
         self.model.schedule.add(new_vehicle)
+        self.model.vehicle_counter += 1
+        return new_vehicle
 
     lcg = lcg()
 
@@ -225,7 +223,6 @@ class spawnpoint(Agent):
         if self.model.tick % 2 == 0:
             if self.lcg.lcg() < .15:
                 self.spawn_vehicle()
-                self.model.vehicle_counter += 1
 
 class road(Agent):
     def __init__(self, flip: bool) -> None:
@@ -510,6 +507,6 @@ class environment(Model):
     def step(self) -> None:
         self.tick += 1
         self.schedule.step()
-        if self.tick % 100 == 0:
+        if self.tick % 1200 == 0:
             print(f"Average speed is {round(sum(self.avg_speeds) / len(self.avg_speeds), 2)} km/h")
             print(f"Average bus delay is {round(sum(self.avg_delays) / len(self.avg_delays), 2)} seconds")
