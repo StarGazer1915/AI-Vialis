@@ -62,16 +62,6 @@ class Test_car(unittest.TestCase):
             self.car.move()
         self.assertEqual(self.car.pos, (24, 39))
 
-    # def test_remove_car_from_simulation(self):
-    #     self.model.step()
-    #     self.car.remove()
-    #     print(self.car.unique_id)
-    #     if self.car:
-    #         # self.fail("Car not removed")
-    #         print("fail")
-    #     else:
-    #         print("pass")
-
 class test_trafficlight_sensors(unittest.TestCase):
     def setUp(self) -> None:
 
