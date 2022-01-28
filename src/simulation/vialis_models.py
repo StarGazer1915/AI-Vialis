@@ -1,10 +1,11 @@
 from copy import copy
+from re import M
 import numpy as np
 from mesa import Agent, Model
 from mesa.space import MultiGrid
 from mesa.time import BaseScheduler
 import random as rn
-from copy import deepcopy
+# import lcg
 
 class lcg:
     seed = 1
@@ -37,7 +38,7 @@ class vehicle(Agent):
         self.model.grid.remove_agent(self)
         del self
 
-    def new_pos_ang(self, angle: int):
+    def new_pos_ang(self, angle: int) -> (tuple, tuple, bool):
         """Get a new position for the agent near him, based on an angle"""
         # Set all coordinates around the agent
         (x, y) = self.pos
@@ -214,15 +215,18 @@ class spawnpoint(Agent):
                               self.model)
         self.model.grid.place_agent(new_vehicle, self.pos)
         self.model.schedule.add(new_vehicle)
-        self.model.vehicle_counter += 1
-        return new_vehicle
 
     lcg = lcg()
 
     def step(self) -> None:
-        if self.model.tick % 2 == 0:
-            if self.lcg.lcg() < .15:
+        if self.model.tick % (self.model.bus_spawnrate * 60) == 0 and self.unique_id == "E8":
+            self.spawn_vehicle()
+            self.model.vehicle_counter += 1
+        if self.model.tick % 2 == 0 and self.unique_id != "E8":
+            if self.lcg.lcg() < (self.model.car_spawnrate * 0.01):
                 self.spawn_vehicle()
+                self.model.vehicle_counter += 1
+
 
 class road(Agent):
     def __init__(self, flip: bool) -> None:
@@ -305,7 +309,7 @@ class traffic_light(Agent):
         self.priority = 0
 
     def calc_queue_prio(self) -> int:
-        temp_priority = deepcopy(self.priority)
+        temp_priority = copy(self.priority)
         for vehicle in self.vehicle_queue:
             temp_priority += 4 if vehicle.color == "#FFFE00" else 1
         return temp_priority
@@ -399,7 +403,8 @@ class sensor(Agent):
 
 class environment(Model):
     def __init__(self, width, height, afs_sto_1_2_sen, afs_sto_3_4_sen, afs_sto_5_7_sen, afs_sto_8_sen,
-                 afs_sto_9_10_sen, afs_sto_11_12_sen, afs_sto_13_15_sen, spawnpoint_color, deathzone_color) -> None:
+                 afs_sto_9_10_sen, afs_sto_11_12_sen, afs_sto_13_15_sen, car_spawnrate, bus_spawnrate,
+                 spawnpoint_color, deathzone_color) -> None:
         self.grid = MultiGrid(width, height, False)
         self.schedule = BaseScheduler(self)
         self.running = True
@@ -409,6 +414,8 @@ class environment(Model):
         self.avg_speeds = []
         self.avg_delays = []
 
+        self.car_spawnrate = car_spawnrate
+        self.bus_spawnrate = bus_spawnrate
         self.spawnpoint_color = spawnpoint_color
         self.deathzone_color = deathzone_color
 
@@ -507,6 +514,6 @@ class environment(Model):
     def step(self) -> None:
         self.tick += 1
         self.schedule.step()
-        if self.tick % 1200 == 0:
+        if self.tick % 1000 == 0:
             print(f"Average speed is {round(sum(self.avg_speeds) / len(self.avg_speeds), 2)} km/h")
             print(f"Average bus delay is {round(sum(self.avg_delays) / len(self.avg_delays), 2)} seconds")
