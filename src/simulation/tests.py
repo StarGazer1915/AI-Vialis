@@ -62,15 +62,15 @@ class Test_car(unittest.TestCase):
             self.car.move()
         self.assertEqual(self.car.pos, (24, 39))
 
-    def test_remove_car_from_simulation(self):
-        self.model.step()
-        self.car.remove()
-        print(self.car.unique_id)
-        if self.car:
-            # self.fail("Car not removed")
-            print("fail")
-        else:
-            print("pass")
+    # def test_remove_car_from_simulation(self):
+    #     self.model.step()
+    #     self.car.remove()
+    #     print(self.car.unique_id)
+    #     if self.car:
+    #         # self.fail("Car not removed")
+    #         print("fail")
+    #     else:
+    #         print("pass")
 
 class test_trafficlight_sensors(unittest.TestCase):
     def setUp(self) -> None:
@@ -79,18 +79,16 @@ class test_trafficlight_sensors(unittest.TestCase):
         self.spawnpoint = spawnpoint("E5", "black", self.model)
         
         self.sensor = self.model.grid.get_cell_list_contents((25, 54))[0]
-        # self.trafficlight = self.model.grid.get_cell_list_contents((25, 40))[0]
         self.car = self.spawnpoint.spawn_vehicle()
-        
 
     def test_detect_car_and_add_to_queue(self):
         self.model.step()
-        self.assertIn(self.car.unique_id, self.sensor.trafficlight.vehicle_queue)
+        self.assertIn(self.car, self.sensor.trafficlight.vehicle_queue)
     
     def test_remove_car_from_queue(self):
         for i in range(14):
             self.model.step
-        self.assertNotIn(self.car.unique_id, self.sensor.trafficlight.vehicle_queue)
+        self.assertNotIn(self.car, self.sensor.trafficlight.vehicle_queue)
     
     def test_start_trafficlight_cycle(self):
         for i in range(15):
