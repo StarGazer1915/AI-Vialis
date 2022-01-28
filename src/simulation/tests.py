@@ -4,7 +4,7 @@ from vialis_models import *
 class Test_car(unittest.TestCase):
     def setUp(self) -> None:
 
-        self.model = environment(56, 56, 13, 13, 12, 7, 13, 11, 13, 'black', 'black')
+        self.model = environment(56, 56, 13, 13, 12, 7, 13, 11, 13, 14, 6, 'black', 'black')
         self.spawnpoint = spawnpoint("E5", "black", self.model)
         self.spawnpoint2 = spawnpoint("E10", "black", self.model)
         self.car =  self.spawnpoint.spawn_vehicle()
@@ -61,7 +61,7 @@ class Test_car(unittest.TestCase):
 class test_trafficlight_sensors(unittest.TestCase):
     def setUp(self) -> None:
 
-        self.model = environment(56, 56, 13, 13, 12, 7, 13, 11, 13, 'black', 'black')
+        self.model = environment(56, 56, 13, 13, 12, 7, 13, 11, 13, 14, 6, 'black', 'black')
         self.spawnpoint = spawnpoint("E5", "black", self.model)
         
         self.sensor = self.model.grid.get_cell_list_contents((25, 54))[0]

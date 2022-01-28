@@ -38,7 +38,7 @@ class vehicle(Agent):
         self.model.grid.remove_agent(self)
         del self
 
-    def new_pos_ang(self, angle: int) -> (tuple, tuple, bool):
+    def new_pos_ang(self, angle: int):
         """Get a new position for the agent near him, based on an angle"""
         # Set all coordinates around the agent
         (x, y) = self.pos
@@ -206,7 +206,7 @@ class spawnpoint(Agent):
         self.pos = self.spawnpoints_cords[self.name][0]
         self.paths = self.spawnpoint_paths[self.name]
 
-    def spawn_vehicle(self) -> None:
+    def spawn_vehicle(self) -> Agent:
         path = rn.choice(self.paths)
         min_ticks = self.spawnpoint_ticks[self.unique_id][self.paths.index(path)]
 
@@ -215,6 +215,8 @@ class spawnpoint(Agent):
                               self.model)
         self.model.grid.place_agent(new_vehicle, self.pos)
         self.model.schedule.add(new_vehicle)
+        self.model.vehicle_counter += 1
+        return new_vehicle
 
     lcg = lcg()
 
@@ -225,7 +227,6 @@ class spawnpoint(Agent):
         if self.model.tick % 2 == 0 and self.unique_id != "E8":
             if self.lcg.lcg() < (self.model.car_spawnrate * 0.01):
                 self.spawn_vehicle()
-                self.model.vehicle_counter += 1
 
 
 class road(Agent):
