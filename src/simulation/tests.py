@@ -1,9 +1,5 @@
-from sre_constants import SRE_FLAG_ASCII
 import unittest
-
 from vialis_models import *
-from vialis_server import model_params
-
 
 class Test_car(unittest.TestCase):
     def setUp(self) -> None:
